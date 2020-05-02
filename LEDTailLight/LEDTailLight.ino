@@ -1,26 +1,60 @@
 #include "FastLED.h"
 #include <EEPROM.h>
+
 #define NUM_LEDS 97
-CRGB leds[NUM_LEDS];
+#define BRIGHTNESS 255
 #define PIN 10
+#define DELAY 10
+#define EYE_SIZE 5
+
+CRGB leds[NUM_LEDS];
+
+const byte leftPin = 2;
+const byte rightPin = 3;
+const byte hazardPin = 4;
+const byte reversePin = 5;
+const byte runningPin = 6;
+
+volatile byte leftState = LOW;
+volatile byte rightState = LOW;
+volatile byte hazardState = LOW;
+volatile byte reverseState = LOW;
+volatile byte runningState = LOW;
 
 void setup()
 {
-  FastLED.addLeds<WS2811, PIN, GRB>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  pinMode(leftPin, INPUT_PULLUP);
+  pinMode(rightPin, INPUT_PULLUP);
+  pinMode(hazardPin, INPUT_PULLUP);
+  pinMode(reversePin, INPUT_PULLUP);
+  pinMode(runningPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(leftPin), leftTurn, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(rightPin), rightTurn, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(hazardPin), hazard, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(reversePin), reverseLights, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(runningPin), runningLights, CHANGE);
+  FastLED.addLeds<WS2811, PIN, GRB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(BRIGHTNESS);
 }
 
 void loop() {
-  NewKITT(0xff, 0, 0, 5, 50, 1);
+//  NewKITT(0xff, 0, 0, 5, 50, 1);
+  if (runningState == LOW) {
+    setAll(0,0,0);
+  } else {
+    setAll(0xff, 0, 0);
+  }
 }
 
 void NewKITT(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay){
-  RightToLeft(red, green, blue, EyeSize, SpeedDelay, ReturnDelay);
-  LeftToRight(red, green, blue, EyeSize, SpeedDelay, ReturnDelay);
-  OutsideToCenter(red, green, blue, EyeSize, SpeedDelay, ReturnDelay);
-  CenterToOutside(red, green, blue, EyeSize, SpeedDelay, ReturnDelay);
+  rightToLeft(red, green, blue, EyeSize, SpeedDelay);
+  leftToRight(red, green, blue, EyeSize, SpeedDelay);
+  outsideToCenter(red, green, blue, EyeSize, SpeedDelay);
+  centerToOutside(red, green, blue, EyeSize, SpeedDelay);
 }
 
-void CenterToOutside(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay) {
+//Hazard Out Pattern
+void centerToOutside(byte red, byte green, byte blue, int EyeSize, int SpeedDelay) {
   for(int i =((NUM_LEDS-EyeSize)/2); i >= -EyeSize; i--) {
     setAll(0,0,0);
     
@@ -39,10 +73,11 @@ void CenterToOutside(byte red, byte green, byte blue, int EyeSize, int SpeedDela
     showStrip();
     delay(SpeedDelay);
   }
-  delay(ReturnDelay);
+  delay(SpeedDelay);
 }
 
-void OutsideToCenter(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay) {
+// Hazard In Pattern
+void outsideToCenter(byte red, byte green, byte blue, int EyeSize, int SpeedDelay) {
   for(int i = -EyeSize; i<=((NUM_LEDS-EyeSize)/2); i++) {
     setAll(0,0,0);
     
@@ -61,10 +96,11 @@ void OutsideToCenter(byte red, byte green, byte blue, int EyeSize, int SpeedDela
     showStrip();
     delay(SpeedDelay);
   }
-  delay(ReturnDelay);
+  delay(SpeedDelay);
 }
 
-void LeftToRight(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay) {
+// Right Turn Signal Pattern
+void leftToRight(byte red, byte green, byte blue, int EyeSize, int SpeedDelay) {
   for(int i = -EyeSize; i < NUM_LEDS+EyeSize; i++) {
     setAll(0,0,0);
     setPixel(i, red/10, green/10, blue/10);
@@ -75,10 +111,11 @@ void LeftToRight(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
     showStrip();
     delay(SpeedDelay);
   }
-  delay(ReturnDelay);
+  delay(SpeedDelay);
 }
 
-void RightToLeft(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay) {
+// Left Turn Signal Pattern
+void rightToLeft(byte red, byte green, byte blue, int EyeSize, int SpeedDelay) {
   for(int i = NUM_LEDS+EyeSize; i > -EyeSize; i--) {
     setAll(0,0,0);
     setPixel(i, red/10, green/10, blue/10);
@@ -89,12 +126,38 @@ void RightToLeft(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, i
     showStrip();
     delay(SpeedDelay);
   }
-  delay(ReturnDelay);
+  delay(SpeedDelay);
 }
 
-// ***************************************
-// ** FastLed/NeoPixel Common Functions **
-// ***************************************
+void leftTurn() {
+  rightToLeft(0xff, 0, 0, EYE_SIZE, DELAY);
+}
+
+void rightTurn() {
+  
+}
+
+void hazard() {
+  
+}
+
+//Reverse Lights
+void reverseLights() {
+  reverseState = !reverseState;
+  if (reverseState == LOW) {
+    setAll(0,0,0);
+  } else {
+    setAll(0xff, 0xff, 0xff);
+  }
+}
+
+void runningLights() {
+  runningState = !runningState;
+}
+
+// ******************************
+// ** FastLed Common Functions **
+// ******************************
 
 // Apply LED color changes
 void showStrip() {
