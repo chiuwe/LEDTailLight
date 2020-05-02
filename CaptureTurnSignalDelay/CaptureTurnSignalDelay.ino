@@ -12,15 +12,15 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
 }
 
-void singal() {
+void signal() {
   signalState = !signalState;
   if(signalState == LOW) {
     elapsedTime = millis() - startTime;
-    Serial.println((int)(elapsedTime/1000L));
+    if(elapsedTime > 1) {
+      Serial.println(elapsedTime);
+    }
   } else {
     startTime = millis();
   }
