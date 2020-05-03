@@ -6,6 +6,7 @@
 #define PIN 10
 #define DELAY 10
 #define EYE_SIZE 5
+#define DEBUG 1
 
 CRGB leds[NUM_LEDS];
 
@@ -14,43 +15,41 @@ const byte rightPin = 3;
 const byte hazardPin = 4;
 const byte reversePin = 5;
 const byte runningPin = 6;
+const byte strobePin = 7;
 
-volatile byte leftState = LOW;
-volatile byte rightState = LOW;
-volatile byte hazardState = LOW;
 volatile byte reverseState = LOW;
 volatile byte runningState = LOW;
+volatile byte strobeState = LOW;
 
 void setup()
 {
+  if(DEBUG) {Serial.begin(9600);}
   pinMode(leftPin, INPUT_PULLUP);
   pinMode(rightPin, INPUT_PULLUP);
   pinMode(hazardPin, INPUT_PULLUP);
   pinMode(reversePin, INPUT_PULLUP);
   pinMode(runningPin, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(leftPin), leftTurn, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(rightPin), rightTurn, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(hazardPin), hazard, CHANGE);
+  pinMode(strobePin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(leftPin), leftTurn, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightPin), rightTurn, RISING);
+  attachInterrupt(digitalPinToInterrupt(hazardPin), hazard, RISING);
   attachInterrupt(digitalPinToInterrupt(reversePin), reverseLights, CHANGE);
   attachInterrupt(digitalPinToInterrupt(runningPin), runningLights, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(strobePin), strobeLights, CHANGE);
   FastLED.addLeds<WS2811, PIN, GRB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
 }
 
 void loop() {
-//  NewKITT(0xff, 0, 0, 5, 50, 1);
-  if (runningState == LOW) {
+  if(runningState == LOW) {
     setAll(0,0,0);
   } else {
-    setAll(0xff, 0, 0);
+    setAll(0xff/4, 0, 0);
+    showStrip();
   }
-}
-
-void NewKITT(byte red, byte green, byte blue, int EyeSize, int SpeedDelay, int ReturnDelay){
-  rightToLeft(red, green, blue, EyeSize, SpeedDelay);
-  leftToRight(red, green, blue, EyeSize, SpeedDelay);
-  outsideToCenter(red, green, blue, EyeSize, SpeedDelay);
-  centerToOutside(red, green, blue, EyeSize, SpeedDelay);
+  while(strobeState) {
+   // create some sort of strobe pattern 
+  }
 }
 
 //Hazard Out Pattern
@@ -134,11 +133,11 @@ void leftTurn() {
 }
 
 void rightTurn() {
-  
+  rightToLeft(0xff, 0, 0, EYE_SIZE, DELAY);
 }
 
 void hazard() {
-  
+  centerToOutside(0xff, 0, 0, EYE_SIZE, DELAY*2);
 }
 
 //Reverse Lights
@@ -153,6 +152,14 @@ void reverseLights() {
 
 void runningLights() {
   runningState = !runningState;
+  if(DEBUG) {
+    Serial.print("running state: ");
+    Serial.println(runningState);
+  }
+}
+
+void strobeLights() {
+  strobeState = !strobeState;
 }
 
 // ******************************
