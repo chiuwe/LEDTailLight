@@ -36,16 +36,22 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(reversePin), reverseLights, CHANGE);
   attachInterrupt(digitalPinToInterrupt(runningPin), runningLights, CHANGE);
   attachInterrupt(digitalPinToInterrupt(strobePin), strobeLights, CHANGE);
+  reverseState = digitalRead(reversePin);
+  runningState = digitalRead(runningPin);
+  strobeState = digitalRead(strobePin);
   FastLED.addLeds<WS2811, PIN, GRB>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
 }
 
 void loop() {
-  if(runningState == LOW) {
-    setAll(0,0,0);
+  if(reverseState == HIGH) {
+    setAll(0xff, 0xff, 0xff);
   } else {
-    setAll(0xff/4, 0, 0);
-    showStrip();
+    if(runningState == LOW) {
+      setAll(0,0,0);
+    } else {
+      setAll(0xff/4, 0, 0);
+    }
   }
   while(strobeState) {
    // create some sort of strobe pattern 
@@ -143,11 +149,6 @@ void hazard() {
 //Reverse Lights
 void reverseLights() {
   reverseState = !reverseState;
-  if (reverseState == LOW) {
-    setAll(0,0,0);
-  } else {
-    setAll(0xff, 0xff, 0xff);
-  }
 }
 
 void runningLights() {
